@@ -1,0 +1,25 @@
+# Example staging environment configuration (YAML format).
+# All values below are placeholders for demonstration purposes only.
+
+APP_NAME: widget-service
+LOG_LEVEL: info
+
+# Expected to differ per environment (see rules.yaml: expected_variance).
+DATABASE_URL: postgres://staging-db.internal:5432/widgets
+DB_HOST: staging-db.internal
+
+# Secret-pattern keys: configsync will never print these values in any
+# report, only whether they differ across environments.
+DB_PASSWORD: staging-secret-pw-aaa111
+API_KEY: staging-fake-key-1111111111
+
+# Must be identical everywhere (see rules.yaml: must_match). Here
+# FEATURE_NEW_UI is a native YAML boolean, not a string -- that mismatch
+# against the .env file's string "true" is exactly the "type-differs"
+# class configsync exists to catch.
+FEATURE_NEW_UI: true
+REQUEST_TIMEOUT_MS: "3000"
+
+# Present only in staging: a rollout flag that hasn't reached dev or prod
+# yet. Not covered by any rule, so it is reported as unexpected drift.
+STAGING_ONLY_FLAG: true

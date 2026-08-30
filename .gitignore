@@ -1,0 +1,19 @@
+# Build artifacts
+/configsync
+/bin/
+*.exe
+*.test
+
+# Snapshots and reports generated while using the tool locally
+*.snapshot.json
+snapshot.json
+drift-report.json
+
+# Go
+/vendor/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

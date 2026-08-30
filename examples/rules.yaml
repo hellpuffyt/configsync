@@ -1,0 +1,35 @@
+# Example drift rules for configsync.
+#
+# Patterns use '*' as a wildcard and are matched case-insensitively against
+# both a key's full dotted path (e.g. "database.credentials.host") and its
+# final path segment (e.g. "host").
+
+# Keys that are expected to differ between environments. A difference here
+# is still recorded (and shown with --format json) but is not "unexpected"
+# drift, so it will not fail a CI gate.
+expected_variance:
+  - "*_URL"
+  - "*_HOST"
+  - "*_PORT"
+  - "*_REGION"
+
+# Keys that must be identical in every environment. A difference here is
+# always treated as unexpected, even if it would otherwise match an
+# expected_variance pattern above.
+must_match:
+  - "FEATURE_*"
+  - "*_TIMEOUT_MS"
+  - "*_ENABLED"
+
+# Keys to exclude from comparison entirely -- neither reported nor counted
+# toward drift, e.g. generated or environment-local bookkeeping fields.
+ignore:
+  - "GENERATED_AT"
+  - "_COMMENT*"
+
+# Additional secret patterns, layered on top of configsync's built-in
+# defaults (*PASSWORD*, *SECRET*, *TOKEN*, *_KEY, *CREDENTIAL*, and more).
+# Values for a matching key are never printed in any report or snapshot.
+secret_patterns:
+  - "*_DSN"
+  - "*SIGNING*"

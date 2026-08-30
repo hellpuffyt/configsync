@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (Go ${{ matrix.go }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ["1.22", "1.23"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Build
+        run: go build ./...
+
+      - name: "Run tests (go test ./...)"
+        run: go test ./... -v
+
+  lint:
+    name: Vet and format check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: "Check formatting (gofmt -l)"
+        run: |
+          fmt_out="$(gofmt -l .)"
+          if [ -n "$fmt_out" ]; then
+            echo "The following files are not gofmt-formatted:"
+            echo "$fmt_out"
+            exit 1
+          fi
+
+  smoke:
+    name: Smoke test against example environments
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Build binary
+        run: go build -o configsync ./cmd/configsync
+
+      - name: "Compare examples (expect exit code 1: unexpected drift present)"
+        run: |
+          set +e
+          ./configsync compare \
+            --env dev=examples/dev.env \
+            --env staging=examples/staging.yaml \
+            --env prod=examples/prod.json \
+            --rules examples/rules.yaml \
+            --format table
+          code=$?
+          echo "exit code: $code"
+          if [ "$code" -ne 1 ]; then
+            echo "expected exit code 1 (unexpected drift present in the committed examples), got $code"
+            exit 1
+          fi
+
+      - name: "Assert no secret value leaks into JSON output"
+        run: |
+          ./configsync compare \
+            --env dev=examples/dev.env \
+            --env staging=examples/staging.yaml \
+            --env prod=examples/prod.json \
+            --rules examples/rules.yaml \
+            --format json \
+            --exit-zero > report.json
+          if grep -q "prod-secret-pw\|staging-secret-pw\|dev-local-placeholder-pw" report.json; then
+            echo "a secret value leaked into JSON output"
+            exit 1
+          fi
+          echo "no secret values found in report.json"
+
+      - name: "Snapshot and drift round-trip"
+        run: |
+          ./configsync snapshot \
+            --env dev=examples/dev.env \
+            --env staging=examples/staging.yaml \
+            --env prod=examples/prod.json \
+            --rules examples/rules.yaml \
+            --out baseline.json
+          ./configsync drift \
+            --snapshot baseline.json \
+            --env dev=examples/dev.env \
+            --env staging=examples/staging.yaml \
+            --env prod=examples/prod.json \
+            --rules examples/rules.yaml
+          code=$?
+          echo "drift exit code: $code"
+          if [ "$code" -ne 0 ]; then
+            echo "expected exit code 0 (no drift since the snapshot was just taken), got $code"
+            exit 1
+          fi

@@ -1,0 +1,13 @@
+{
+  "APP_NAME": "widget-service",
+  "LOG_LEVEL": "warn",
+
+  "DATABASE_URL": "postgres://prod-db.internal:5432/widgets",
+  "DB_HOST": "prod-db.internal",
+
+  "DB_PASSWORD": "prod-secret-pw-zzz999",
+  "API_KEY": "prod-fake-key-9999999999",
+
+  "FEATURE_NEW_UI": true,
+  "REQUEST_TIMEOUT_MS": "3000"
+}
