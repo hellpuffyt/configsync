@@ -155,7 +155,7 @@ unparsable files, a repeated environment name).
 ### JSON output
 
 ```
-configsync compare --env dev=dev.env --env prod=prod.yaml --format json
+configsync compare --env dev=examples/dev.env --env prod=examples/prod.json --format json
 ```
 
 Produces a document with a `summary` (counts per classification) and an
@@ -165,11 +165,11 @@ Produces a document with a `summary` (counts per classification) and an
 ### Save and compare against a snapshot
 
 ```
-configsync snapshot --env dev=dev.env --env staging=staging.yaml --env prod=prod.json --out baseline.json
+configsync snapshot --env dev=examples/dev.env --env staging=examples/staging.yaml --env prod=examples/prod.json --out baseline.json
 
 # ... time passes, configs change ...
 
-configsync drift --snapshot baseline.json --env dev=dev.env --env staging=staging.yaml --env prod=prod.json
+configsync drift --snapshot baseline.json --env dev=examples/dev.env --env staging=examples/staging.yaml --env prod=examples/prod.json
 ```
 
 `drift` reports every key/environment pair whose presence or value changed
