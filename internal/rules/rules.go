@@ -5,6 +5,7 @@
 package rules
 
 import (
+	"net/url"
 	"os"
 	"strings"
 
@@ -95,6 +96,24 @@ func (r *Rules) IsSecret(key string) bool {
 		return false
 	}
 	return r.matchesAny(key, r.SecretPatterns)
+}
+
+// RedactCredentials hides a password embedded in a URL value, such as
+// DATABASE_URL=postgres://app:hunter2@db/app, which no key-name pattern
+// catches. It returns the value with the password replaced by "xxxxx" and
+// true, or the value unchanged and false when there is nothing to hide.
+func RedactCredentials(raw string) (string, bool) {
+	if !strings.Contains(raw, "://") || !strings.Contains(raw, "@") {
+		return raw, false
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme == "" || u.User == nil {
+		return raw, false
+	}
+	if _, hasPassword := u.User.Password(); !hasPassword {
+		return raw, false
+	}
+	return u.Redacted(), true
 }
 
 func (r *Rules) matchesAny(key string, patterns []string) bool {

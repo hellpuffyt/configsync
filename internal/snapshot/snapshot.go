@@ -49,6 +49,9 @@ func Build(envs []model.Environment, r *rules.Rules) Snapshot {
 		Entries:      make(map[string]map[string]Entry),
 	}
 	for _, key := range model.UnionKeys(envs) {
+		if r.IsIgnored(key) {
+			continue // ignored keys are "neither reported nor counted"
+		}
 		secret := r.IsSecret(key)
 		perEnv := make(map[string]Entry, len(envs))
 		for _, e := range envs {
@@ -57,6 +60,11 @@ func Build(envs []model.Environment, r *rules.Rules) Snapshot {
 			if present {
 				entry.Kind = string(v.Kind)
 				if secret {
+					entry.Hash = hashValue(v.Raw)
+				} else if shown, redacted := rules.RedactCredentials(v.Raw); redacted {
+					// Keep the URL readable, but store the password only
+					// as part of a hash so a changed password is detected.
+					entry.Value = shown
 					entry.Hash = hashValue(v.Raw)
 				} else {
 					entry.Value = v.Raw
@@ -114,6 +122,18 @@ type DriftEntry struct {
 	Secret bool       `json:"secret,omitempty"`
 }
 
+// WithoutIgnored drops drift entries for keys the rules ignore, so a
+// snapshot taken before a key was added to `ignore` does not report it.
+func WithoutIgnored(entries []DriftEntry, r *rules.Rules) []DriftEntry {
+	out := entries[:0:0]
+	for _, e := range entries {
+		if !r.IsIgnored(e.Key) {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
 // Diff compares an older snapshot against a newer one and returns every
 // key/environment pair whose state changed. Secret values are compared by
 // hash only, so a changed secret is reported without ever revealing it.
@@ -165,7 +185,7 @@ func Diff(oldSnap, newSnap Snapshot) []DriftEntry {
 					if oe.Hash != ne.Hash {
 						out = append(out, DriftEntry{Key: key, Env: env, Change: ValueChanged, Secret: true})
 					}
-				} else if oe.Value != ne.Value || oe.Kind != ne.Kind {
+				} else if oe.Value != ne.Value || oe.Kind != ne.Kind || oe.Hash != ne.Hash {
 					out = append(out, DriftEntry{Key: key, Env: env, Change: ValueChanged})
 				}
 			}
