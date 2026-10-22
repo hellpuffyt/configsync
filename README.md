@@ -134,14 +134,14 @@ configsync compare \
 ```
 
 ```
-KEY                dev                                      staging                                       prod                                       STATUS
-API_KEY            [REDACTED]                               [REDACTED]                                    [REDACTED]                                 value-differs
-DATABASE_URL       postgres://dev-db.internal:5432/widgets   postgres://staging-db.internal:5432/widgets   postgres://prod-db.internal:5432/widgets   expected-variance
-DB_HOST            dev-db.internal                           staging-db.internal                           prod-db.internal                           expected-variance
-DB_PASSWORD        [REDACTED]                                [REDACTED]                                    [REDACTED]                                 value-differs
-FEATURE_NEW_UI     true                                      true                                          true                                       type-differs (must-match)
-LOG_LEVEL          debug                                     info                                          warn                                       value-differs
-STAGING_ONLY_FLAG  <missing>                                 true                                          <missing>                                  missing
+KEY                dev                                      staging                                      prod                                      STATUS
+API_KEY            [REDACTED]                               [REDACTED]                                   [REDACTED]                                value-differs
+DATABASE_URL       postgres://dev-db.internal:5432/widgets  postgres://staging-db.internal:5432/widgets  postgres://prod-db.internal:5432/widgets  expected-variance
+DB_HOST            dev-db.internal                          staging-db.internal                          prod-db.internal                          expected-variance
+DB_PASSWORD        [REDACTED]                               [REDACTED]                                   [REDACTED]                                value-differs
+FEATURE_NEW_UI     true                                     true                                         true                                      type-differs (must-match)
+LOG_LEVEL          debug                                    info                                         warn                                      value-differs
+STAGING_ONLY_FLAG  <missing>                                true                                         <missing>                                 missing
 
 7 key(s) shown, 5 unexpected drift
 ```
