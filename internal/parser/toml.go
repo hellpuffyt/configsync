@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -9,9 +10,11 @@ import (
 )
 
 // ParseTOML parses a practical subset of TOML: [table] and [[array.of.tables]]
-// headers, dotted keys, quoted and bare keys, string/bool/int/float scalars,
-// and single-line inline arrays of scalars. It does not support multi-line
-// arrays, inline tables, or TOML datetimes.
+// headers, dotted keys, quoted and bare keys, string/bool/int (decimal, hex,
+// octal, binary)/float scalars, datetimes (kept as strings), and single-line
+// inline arrays of scalars. Inline tables, multi-line strings and multi-line
+// arrays are not supported and are rejected with an error rather than
+// misread; so are duplicate keys.
 func ParseTOML(data []byte) (model.Config, error) {
 	root := make(map[string]interface{})
 	current := root
@@ -63,43 +66,53 @@ func ParseTOML(data []byte) (model.Config, error) {
 	return out, nil
 }
 
+// quoteState tracks whether a left-to-right scan is inside a TOML string.
+// Basic ("...") strings honour backslash escapes, so \" does not end them;
+// literal ('...') strings have no escapes.
+type quoteState struct{ inSingle, inDouble, escaped bool }
+
+// step advances over c and reports whether c is outside any string.
+func (q *quoteState) step(c byte) bool {
+	switch {
+	case q.inDouble:
+		if q.escaped {
+			q.escaped = false
+		} else if c == '\\' {
+			q.escaped = true
+		} else if c == '"' {
+			q.inDouble = false
+		}
+		return false
+	case q.inSingle:
+		if c == '\'' {
+			q.inSingle = false
+		}
+		return false
+	case c == '"':
+		q.inDouble = true
+		return false
+	case c == '\'':
+		q.inSingle = true
+		return false
+	}
+	return true
+}
+
 func stripTOMLComment(line string) string {
-	inSingle, inDouble := false, false
+	var q quoteState
 	for i := 0; i < len(line); i++ {
-		switch line[i] {
-		case '"':
-			if !inSingle {
-				inDouble = !inDouble
-			}
-		case '\'':
-			if !inDouble {
-				inSingle = !inSingle
-			}
-		case '#':
-			if !inSingle && !inDouble {
-				return line[:i]
-			}
+		if q.step(line[i]) && line[i] == '#' {
+			return line[:i]
 		}
 	}
 	return line
 }
 
 func indexUnquoted(s string, target byte) int {
-	inSingle, inDouble := false, false
+	var q quoteState
 	for i := 0; i < len(s); i++ {
-		switch s[i] {
-		case '"':
-			if !inSingle {
-				inDouble = !inDouble
-			}
-		case '\'':
-			if !inDouble {
-				inSingle = !inSingle
-			}
-		default:
-			if s[i] == target && !inSingle && !inDouble {
-				return i
-			}
+		if q.step(s[i]) && s[i] == target {
+			return i
 		}
 	}
 	return -1
@@ -213,7 +226,13 @@ func setDotted(tbl map[string]interface{}, path []string, value interface{}) err
 		}
 		cur = m
 	}
-	cur[path[len(path)-1]] = value
+	last := path[len(path)-1]
+	if _, exists := cur[last]; exists {
+		// TOML forbids defining a key twice; silently keeping the last
+		// value (or replacing a whole table) would hide the conflict.
+		return fmt.Errorf("duplicate key %q", strings.Join(path, "."))
+	}
+	cur[last] = value
 	return nil
 }
 
@@ -227,6 +246,10 @@ func parseTOMLValue(s string) (interface{}, error) {
 		return true, nil
 	case s == "false":
 		return false, nil
+	case strings.HasPrefix(s, `"""`) || strings.HasPrefix(s, "'''"):
+		return nil, fmt.Errorf("multi-line strings are not supported: %s", s)
+	case strings.HasPrefix(s, "{"):
+		return nil, fmt.Errorf("inline tables are not supported (use a [table] header): %s", s)
 	case strings.HasPrefix(s, `"`):
 		return parseTOMLBasicString(s)
 	case strings.HasPrefix(s, `'`):
@@ -237,17 +260,37 @@ func parseTOMLValue(s string) (interface{}, error) {
 	case strings.HasPrefix(s, "["):
 		return parseTOMLArray(s)
 	default:
+		if tomlDateTime.MatchString(s) {
+			return s, nil // datetimes are compared as written
+		}
 		clean := strings.ReplaceAll(s, "_", "")
+		for prefix, b := range map[string]int{"0x": 16, "0o": 8, "0b": 2} {
+			if strings.HasPrefix(clean, prefix) {
+				i, err := strconv.ParseInt(clean[2:], b, 64)
+				if err != nil {
+					return nil, fmt.Errorf("invalid integer %q", s)
+				}
+				return i, nil
+			}
+		}
 		if i, err := strconv.ParseInt(clean, 10, 64); err == nil {
 			return i, nil
 		}
-		if f, err := strconv.ParseFloat(clean, 64); err == nil {
-			return f, nil
+		if tomlFloat.MatchString(clean) {
+			if f, err := strconv.ParseFloat(clean, 64); err == nil {
+				return f, nil
+			}
 		}
-		// Fall back to a bare/unquoted string (dates, unknown literals, etc).
-		return s, nil
+		// Anything else (e.g. an unquoted word) is not valid TOML; it used
+		// to be accepted as a string, hiding typos and unsupported syntax.
+		return nil, fmt.Errorf("unsupported or invalid value %q", s)
 	}
 }
+
+var (
+	tomlDateTime = regexp.MustCompile(`^(\d{4}-\d{2}-\d{2}([Tt ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?([Zz]|[+-]\d{2}:\d{2})?)?|\d{2}:\d{2}:\d{2}(\.\d+)?)$`)
+	tomlFloat    = regexp.MustCompile(`^[+-]?(\d+(\.\d+)?([eE][+-]?\d+)?|inf|nan)$`)
+)
 
 func parseTOMLBasicString(s string) (string, error) {
 	if len(s) < 2 || s[len(s)-1] != '"' {
@@ -305,28 +348,19 @@ func parseTOMLArray(s string) ([]interface{}, error) {
 func splitTOMLArrayElems(s string) []string {
 	var parts []string
 	depth := 0
-	inSingle, inDouble := false, false
+	var q quoteState
 	start := 0
 	for i := 0; i < len(s); i++ {
+		if !q.step(s[i]) {
+			continue
+		}
 		switch s[i] {
-		case '"':
-			if !inSingle {
-				inDouble = !inDouble
-			}
-		case '\'':
-			if !inDouble {
-				inSingle = !inSingle
-			}
 		case '[':
-			if !inSingle && !inDouble {
-				depth++
-			}
+			depth++
 		case ']':
-			if !inSingle && !inDouble {
-				depth--
-			}
+			depth--
 		case ',':
-			if !inSingle && !inDouble && depth == 0 {
+			if depth == 0 {
 				parts = append(parts, s[start:i])
 				start = i + 1
 			}

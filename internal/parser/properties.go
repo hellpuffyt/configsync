@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/hellpuffyt/configsync/internal/model"
@@ -76,8 +77,9 @@ func splitPropertyLine(line string) (key, value string, err error) {
 	for i < len(line) {
 		c := line[i]
 		if c == '\\' && i+1 < len(line) {
-			keyBuf.WriteByte(unescapeChar(line[i+1]))
-			i += 2
+			text, n := propertyEscape(line[i:])
+			keyBuf.WriteString(text)
+			i += n
 			continue
 		}
 		if c == '=' || c == ':' || c == ' ' || c == '\t' {
@@ -119,13 +121,27 @@ func unescapeChar(c byte) byte {
 
 func unescapeProperty(s string) string {
 	var b strings.Builder
-	for i := 0; i < len(s); i++ {
+	for i := 0; i < len(s); {
 		if s[i] == '\\' && i+1 < len(s) {
-			b.WriteByte(unescapeChar(s[i+1]))
-			i++
+			text, n := propertyEscape(s[i:])
+			b.WriteString(text)
+			i += n
 			continue
 		}
 		b.WriteByte(s[i])
+		i++
 	}
 	return b.String()
+}
+
+// propertyEscape decodes the escape at the start of s (which begins with a
+// backslash) and returns the text and the number of bytes consumed. It
+// handles \uXXXX, which Java .properties files use for non-ASCII text.
+func propertyEscape(s string) (string, int) {
+	if s[1] == 'u' && len(s) >= 6 {
+		if r, err := strconv.ParseUint(s[2:6], 16, 32); err == nil {
+			return string(rune(r)), 6
+		}
+	}
+	return string(unescapeChar(s[1])), 2
 }
