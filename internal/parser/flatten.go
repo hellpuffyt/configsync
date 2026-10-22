@@ -1,10 +1,13 @@
 package parser
 
 import (
+	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
+	"strings"
 
-	"github.com/prabeshsharma/configsync/internal/model"
+	"github.com/hellpuffyt/configsync/internal/model"
 )
 
 // Flatten walks an arbitrary decoded tree (as produced by encoding/json,
@@ -57,9 +60,17 @@ func Flatten(v interface{}, prefix string, out model.Config) {
 		if prefix != "" {
 			out[prefix] = model.Value{Raw: strconv.FormatInt(val, 10), Kind: model.KindNumber}
 		}
+	case uint64:
+		if prefix != "" {
+			out[prefix] = model.Value{Raw: strconv.FormatUint(val, 10), Kind: model.KindNumber}
+		}
 	case float64:
 		if prefix != "" {
 			out[prefix] = model.Value{Raw: formatFloat(val), Kind: model.KindNumber}
+		}
+	case json.Number:
+		if prefix != "" {
+			out[prefix] = model.Value{Raw: formatJSONNumber(val), Kind: model.KindNumber}
 		}
 	default:
 		if prefix != "" {
@@ -79,8 +90,39 @@ func joinPath(prefix, key string) string {
 // a whole number, so JSON's "8080" and YAML's "8080" compare equal instead
 // of showing up as a spurious value-differs.
 func formatFloat(f float64) string {
-	if f == float64(int64(f)) {
+	// Only convert when the value is integral and well inside int64 range;
+	// converting a larger float to int64 is undefined.
+	if f == math.Trunc(f) && math.Abs(f) < 1e18 {
 		return strconv.FormatInt(int64(f), 10)
 	}
 	return strconv.FormatFloat(f, 'g', -1, 64)
+}
+
+// formatJSONNumber renders a JSON number exactly when it is an integer
+// (of any size), and like formatFloat otherwise, so "8080" and "8080.0"
+// still match YAML's 8080.
+func formatJSONNumber(n json.Number) string {
+	s := n.String()
+	if i, err := n.Int64(); err == nil {
+		return strconv.FormatInt(i, 10)
+	}
+	if isDigits(strings.TrimPrefix(s, "-")) {
+		return s // integer too large for int64: keep every digit
+	}
+	if f, err := n.Float64(); err == nil {
+		return formatFloat(f)
+	}
+	return s
+}
+
+func isDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return false
+		}
+	}
+	return true
 }

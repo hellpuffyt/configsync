@@ -5,7 +5,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/prabeshsharma/configsync/internal/diff"
+	"github.com/hellpuffyt/configsync/internal/diff"
+	"github.com/hellpuffyt/configsync/internal/rules"
 )
 
 // JSONCell is one environment's redacted view of a key, for JSON output.
@@ -73,7 +74,7 @@ func BuildDocument(m diff.Matrix) Document {
 				if e.Secret {
 					jc.Redacted = true
 				} else {
-					jc.Value = c.Value.Raw
+					jc.Value, jc.Redacted = rules.RedactCredentials(c.Value.Raw)
 				}
 			}
 			je.Values[env] = jc

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/prabeshsharma/configsync/internal/diff"
-	"github.com/prabeshsharma/configsync/internal/model"
-	"github.com/prabeshsharma/configsync/internal/rules"
+	"github.com/hellpuffyt/configsync/internal/diff"
+	"github.com/hellpuffyt/configsync/internal/model"
+	"github.com/hellpuffyt/configsync/internal/rules"
 )
 
 const secretValue = "s3cr3t-super-sensitive-value-xyz123"

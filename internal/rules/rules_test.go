@@ -132,3 +132,38 @@ func TestRules_NilRulesNeverPanics(t *testing.T) {
 		t.Error("nil rules should never match")
 	}
 }
+
+// Pins the behaviour the README documents for full-path vs last-segment
+// matching (the README previously claimed `*_HOST` matched
+// `database.credentials.host`, which it does not: that segment has no
+// underscore).
+func TestRules_FullPathAndLastSegment(t *testing.T) {
+	r := &Rules{ExpectedVariance: []string{"*_HOST"}}
+	for key, want := range map[string]bool{
+		"DB_HOST":                   true,
+		"services.db.DB_HOST":       true,
+		"database.credentials.host": false,
+	} {
+		if got := r.IsExpectedVariance(key); got != want {
+			t.Errorf("*_HOST vs %s = %v, want %v", key, got, want)
+		}
+	}
+	r = &Rules{ExpectedVariance: []string{"*host"}}
+	if !r.IsExpectedVariance("database.credentials.host") {
+		t.Error("*host should match database.credentials.host")
+	}
+}
+
+func TestRedactCredentials(t *testing.T) {
+	for in, want := range map[string]string{
+		"postgres://app:pw@db:5432/app?sslmode=require": "postgres://app:xxxxx@db:5432/app?sslmode=require",
+		"redis://:pw@cache:6379/0":                      "redis://:xxxxx@cache:6379/0",
+		"https://user@example.com/x":                    "https://user@example.com/x",
+		"plain-value":                                   "plain-value",
+		"mailto:someone@example.com":                    "mailto:someone@example.com",
+	} {
+		if got, _ := RedactCredentials(in); got != want {
+			t.Errorf("RedactCredentials(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

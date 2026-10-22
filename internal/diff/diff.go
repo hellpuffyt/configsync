@@ -3,8 +3,8 @@
 package diff
 
 import (
-	"github.com/prabeshsharma/configsync/internal/model"
-	"github.com/prabeshsharma/configsync/internal/rules"
+	"github.com/hellpuffyt/configsync/internal/model"
+	"github.com/hellpuffyt/configsync/internal/rules"
 )
 
 // Classification identifies the kind of drift found for a single key.

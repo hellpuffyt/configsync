@@ -1,7 +1,9 @@
 package parser
 
 import (
-	"github.com/prabeshsharma/configsync/internal/model"
+	"math"
+
+	"github.com/hellpuffyt/configsync/internal/model"
 	"gopkg.in/yaml.v3"
 )
 
@@ -36,7 +38,10 @@ func normalizeYAML(v interface{}) interface{} {
 	case int:
 		return int64(val)
 	case uint64:
-		return int64(val)
+		if val <= math.MaxInt64 {
+			return int64(val)
+		}
+		return val // too large for int64; Flatten renders it exactly
 	default:
 		return val
 	}

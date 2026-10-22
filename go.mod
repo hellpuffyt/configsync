@@ -1,4 +1,4 @@
-module github.com/prabeshsharma/configsync
+module github.com/hellpuffyt/configsync
 
 go 1.22
 

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/prabeshsharma/configsync/internal/model"
+	"github.com/hellpuffyt/configsync/internal/model"
 )
 
 // Format identifies a supported configuration file format.

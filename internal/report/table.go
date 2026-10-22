@@ -9,7 +9,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/prabeshsharma/configsync/internal/diff"
+	"github.com/hellpuffyt/configsync/internal/diff"
+	"github.com/hellpuffyt/configsync/internal/rules"
 )
 
 // cellText renders a single matrix cell for display, honoring secret
@@ -24,7 +25,8 @@ func cellText(c diff.Cell, secret bool) string {
 	if c.Value.IsEmpty() {
 		return "<empty>"
 	}
-	return c.Value.Raw
+	shown, _ := rules.RedactCredentials(c.Value.Raw)
+	return shown
 }
 
 // Table writes a human-readable matrix table to w. When diffOnly is true,

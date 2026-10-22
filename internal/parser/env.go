@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/prabeshsharma/configsync/internal/model"
+	"github.com/hellpuffyt/configsync/internal/model"
 )
 
 // ParseEnv parses the contents of a .env-style file: KEY=VALUE lines,
@@ -74,13 +74,33 @@ func findUnescapedQuote(s string, quote byte) int {
 	return -1
 }
 
+// unescapeDouble decodes the escapes allowed inside a double-quoted .env
+// value: \n \t \r \" and \\. Any other backslash is kept as written.
+// (A strings.Replacer cannot do this: it decoded "\\n" as a backslash
+// followed by a newline.)
 func unescapeDouble(s string) string {
-	replacer := strings.NewReplacer(
-		`\n`, "\n",
-		`\t`, "\t",
-		`\r`, "\r",
-		`\"`, `"`,
-		`\`, `\`,
-	)
-	return replacer.Replace(s)
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		if s[i] != '\\' || i+1 == len(s) {
+			b.WriteByte(s[i])
+			continue
+		}
+		switch s[i+1] {
+		case 'n':
+			b.WriteByte('\n')
+		case 't':
+			b.WriteByte('\t')
+		case 'r':
+			b.WriteByte('\r')
+		case '"':
+			b.WriteByte('"')
+		case '\\':
+			b.WriteByte('\\')
+		default:
+			b.WriteByte('\\')
+			b.WriteByte(s[i+1])
+		}
+		i++
+	}
+	return b.String()
 }

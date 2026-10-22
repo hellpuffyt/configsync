@@ -4,6 +4,35 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Security
+
+- Passwords embedded in URL values are redacted in table/JSON output and
+  stored in snapshots only as part of a hash (they were printed and stored
+  verbatim when the key name was not a secret pattern).
+
+### Fixed
+
+- Module path is `github.com/hellpuffyt/configsync` (the documented
+  `go install` failed with a module path mismatch).
+- `ignore` rules apply to `snapshot` and `drift`.
+- A repeated `--env` name is an error instead of silently replacing an
+  environment.
+- `.env` double-quoted escapes (`\\n` was decoded as backslash + newline).
+- `.properties` `\uXXXX` escapes.
+- JSON integers above 2^53 are compared exactly; YAML integers above
+  MaxInt64 no longer wrap.
+- TOML: escaped quotes no longer end a string when looking for comments;
+  hex/octal/binary integers are numbers; inline tables, bare words and
+  duplicate keys are errors instead of silent misreads.
+
+### Changed
+
+- README corrected: key names are not normalised across formats; the
+  `*_HOST` matching example; unsalted snapshot hashes; exit code 2.
+- CI: least-privilege `permissions`, actions pinned to commit SHAs.
+
 ## [0.1.0] - 2026-08-30
 
 ### Added

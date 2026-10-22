@@ -80,14 +80,16 @@ build.
 | dotenv | `.env` | `KEY=value`, `export KEY=value`, single/double-quoted values with escapes, `#` comments |
 | YAML | `.yaml`, `.yml` | Full nested maps and sequences, native types preserved |
 | JSON | `.json` | Nested objects and arrays, native types preserved |
-| TOML | `.toml` | `[table]` headers, `[[array.of.tables]]`, dotted keys, inline arrays of scalars |
-| Java properties | `.properties` | `key=value`, `key: value`, `key value`, `\` line continuation, `#`/`!` comments |
+| TOML | `.toml` | A subset: `[table]` headers, `[[array.of.tables]]`, dotted keys, strings, booleans, decimal/hex/octal/binary integers, floats, datetimes (compared as text), single-line arrays of scalars. Inline tables, multi-line strings and multi-line arrays are rejected with an error, as are duplicate keys. |
+| Java properties | `.properties` | `key=value`, `key: value`, `key value`, `\` line continuation, `#`/`!` comments, `\uXXXX` escapes |
 
 All formats flatten to the same internal representation
 (`internal/model.Config`, a `map[string]Value`), which is what makes
-cross-format comparison possible: an `.env` file's `DATABASE_URL` and a
-YAML file's `database: {url: ...}` are just different ways of writing the
-same flattened key, once you dot-path the nesting away.
+cross-format comparison possible: a YAML file's `database: {url: ...}` and
+a `.properties` file's `database.url=...` produce the same key,
+`database.url`. Key names are not otherwise normalised: an `.env` file's
+`DATABASE_URL` and YAML's `database.url` are different keys and show up as
+`missing` on each side, so spell keys the same way in every environment.
 
 ## Architecture
 
@@ -132,26 +134,28 @@ configsync compare \
 ```
 
 ```
-KEY                dev                                      staging                                       prod                                       STATUS
-API_KEY            [REDACTED]                               [REDACTED]                                    [REDACTED]                                 value-differs
-DATABASE_URL       postgres://dev-db.internal:5432/widgets   postgres://staging-db.internal:5432/widgets   postgres://prod-db.internal:5432/widgets   expected-variance
-DB_HOST            dev-db.internal                           staging-db.internal                           prod-db.internal                           expected-variance
-DB_PASSWORD        [REDACTED]                                [REDACTED]                                    [REDACTED]                                 value-differs
-FEATURE_NEW_UI     true                                      true                                          true                                       type-differs (must-match)
-LOG_LEVEL          debug                                     info                                          warn                                       value-differs
-STAGING_ONLY_FLAG  <missing>                                 true                                          <missing>                                  missing
+KEY                dev                                      staging                                      prod                                      STATUS
+API_KEY            [REDACTED]                               [REDACTED]                                   [REDACTED]                                value-differs
+DATABASE_URL       postgres://dev-db.internal:5432/widgets  postgres://staging-db.internal:5432/widgets  postgres://prod-db.internal:5432/widgets  expected-variance
+DB_HOST            dev-db.internal                          staging-db.internal                          prod-db.internal                          expected-variance
+DB_PASSWORD        [REDACTED]                               [REDACTED]                                   [REDACTED]                                value-differs
+FEATURE_NEW_UI     true                                     true                                         true                                      type-differs (must-match)
+LOG_LEVEL          debug                                    info                                         warn                                      value-differs
+STAGING_ONLY_FLAG  <missing>                                true                                         <missing>                                 missing
 
 7 key(s) shown, 5 unexpected drift
 ```
 
 By default only differences are shown; pass `--all` to see the full matrix
-including matching keys. Exit code is non-zero whenever unexpected drift is
-found; pass `--exit-zero` to always exit 0 (useful for a report-only run).
+including matching keys. Exit codes: `0` no unexpected drift, `1`
+unexpected drift found (pass `--exit-zero` to always exit 0 for a
+report-only run), `2` usage or input error (bad flags, unreadable or
+unparsable files, a repeated environment name).
 
 ### JSON output
 
 ```
-configsync compare --env dev=dev.env --env prod=prod.yaml --format json
+configsync compare --env dev=examples/dev.env --env prod=examples/prod.json --format json
 ```
 
 Produces a document with a `summary` (counts per classification) and an
@@ -161,15 +165,15 @@ Produces a document with a `summary` (counts per classification) and an
 ### Save and compare against a snapshot
 
 ```
-configsync snapshot --env dev=dev.env --env staging=staging.yaml --env prod=prod.json --out baseline.json
+configsync snapshot --env dev=examples/dev.env --env staging=examples/staging.yaml --env prod=examples/prod.json --out baseline.json
 
 # ... time passes, configs change ...
 
-configsync drift --snapshot baseline.json --env dev=dev.env --env staging=staging.yaml --env prod=prod.json
+configsync drift --snapshot baseline.json --env dev=examples/dev.env --env staging=examples/staging.yaml --env prod=examples/prod.json
 ```
 
 `drift` reports every key/environment pair whose presence or value changed
-since the snapshot was taken. Secret values are stored in the snapshot only
+since the snapshot was taken, except keys matched by `ignore`. Secret values are stored in the snapshot only
 as a `sha256:...` hash, so a changed secret is detected and reported
 without the snapshot file ever holding the plaintext.
 
@@ -195,7 +199,9 @@ secret_patterns:
 
 - Patterns use `*` as the only wildcard, matched case-insensitively against
   both a key's full dotted path and its final segment -- so `*_HOST`
-  matches both `DB_HOST` and `database.credentials.host`.
+  matches both `DB_HOST` and `services.db.DB_HOST`. (It does not match
+  `database.credentials.host`, whose last segment has no underscore; use
+  `*host` for that.)
 - `must_match` takes precedence over `expected_variance` when a key matches
   both: a feature flag named `FEATURE_URL_OVERRIDE` that also looks like a
   URL is still held to "must be identical everywhere."
@@ -217,9 +223,14 @@ repository would be exactly the leak this tool exists to prevent, so:
 - A key matching any secret pattern **never** has its value printed, in
   table output, JSON output, or a saved snapshot -- only whether it is
   present, and whether it differs.
+- A password embedded in a URL value (`postgres://app:PASSWORD@db/app`) is
+  shown as `xxxxx` in every output even when the key name is not a secret
+  pattern; snapshots keep the redacted URL plus a hash of the full value.
 - Snapshots store a SHA-256 hash for secret values instead of the value
   itself, which is enough to detect that a secret changed without ever
-  persisting the plaintext to disk.
+  persisting the plaintext to disk. The hash is unsalted: a short or
+  guessable secret can be recovered by hashing candidates, so treat
+  snapshot files as sensitive and do not publish them.
 - This is the default behavior, not an opt-in flag. Add more patterns via
   `secret_patterns` in your rules file; you cannot turn the built-in
   defaults off.
@@ -247,7 +258,7 @@ secret differences (`DB_PASSWORD`, `API_KEY`). Run the command under
 go test ./...
 ```
 
-The suite covers each format's parser (quoting, comments, nested
+The suite covers the CLI end to end on the committed examples, each format's parser (quoting, comments, nested
 flattening, arrays/tables), every difference classification, rule
 interactions (`expected_variance` suppressing a difference, `must_match`
 escalating one even when `expected_variance` also matches), three-way and
@@ -261,8 +272,25 @@ configsync is a read-only comparison tool: it never writes back to your
 configuration files and never transmits configuration data anywhere. The
 one thing it must never do is print a secret value, which is covered above
 under [Secret safety](#secret-safety) and enforced by dedicated tests. If
-you find a case where a secret value leaks into output, please open an
-issue with a minimal reproduction (using fake values).
+you find a case where a secret value leaks into output, please report it
+privately at https://github.com/hellpuffyt/configsync/security/advisories/new
+(see [SECURITY.md](SECURITY.md)) with a minimal reproduction using fake
+values.
+
+## Limitations
+
+- Secret detection is by key name, plus passwords inside URLs. A secret in
+  a value under an innocuous key name (for example a token pasted into
+  `NOTES`) is printed.
+- Key names are compared exactly after flattening; no case or separator
+  normalisation between formats.
+- Flattening can collide: a YAML key literally named `a.b` and a nested
+  `a: {b: ...}` both become `a.b`.
+- The TOML parser is a subset (see Formats) and reports what it does not
+  support.
+
+See [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) for the
+audit evidence.
 
 ## License
 
