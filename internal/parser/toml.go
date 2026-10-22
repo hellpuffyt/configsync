@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/prabeshsharma/configsync/internal/model"
+	"github.com/hellpuffyt/configsync/internal/model"
 )
 
 // ParseTOML parses a practical subset of TOML: [table] and [[array.of.tables]]

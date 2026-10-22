@@ -9,7 +9,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/prabeshsharma/configsync/internal/diff"
+	"github.com/hellpuffyt/configsync/internal/diff"
 )
 
 // cellText renders a single matrix cell for display, honoring secret

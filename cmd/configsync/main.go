@@ -13,12 +13,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/prabeshsharma/configsync/internal/diff"
-	"github.com/prabeshsharma/configsync/internal/model"
-	"github.com/prabeshsharma/configsync/internal/parser"
-	"github.com/prabeshsharma/configsync/internal/report"
-	"github.com/prabeshsharma/configsync/internal/rules"
-	"github.com/prabeshsharma/configsync/internal/snapshot"
+	"github.com/hellpuffyt/configsync/internal/diff"
+	"github.com/hellpuffyt/configsync/internal/model"
+	"github.com/hellpuffyt/configsync/internal/parser"
+	"github.com/hellpuffyt/configsync/internal/report"
+	"github.com/hellpuffyt/configsync/internal/rules"
+	"github.com/hellpuffyt/configsync/internal/snapshot"
 )
 
 const version = "0.1.0"

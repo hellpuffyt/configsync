@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/prabeshsharma/configsync/internal/model"
+	"github.com/hellpuffyt/configsync/internal/model"
 )
 
 // ParseEnv parses the contents of a .env-style file: KEY=VALUE lines,

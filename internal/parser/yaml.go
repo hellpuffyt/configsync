@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"github.com/prabeshsharma/configsync/internal/model"
+	"github.com/hellpuffyt/configsync/internal/model"
 	"gopkg.in/yaml.v3"
 )
 

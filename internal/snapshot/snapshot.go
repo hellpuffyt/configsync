@@ -14,8 +14,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/prabeshsharma/configsync/internal/model"
-	"github.com/prabeshsharma/configsync/internal/rules"
+	"github.com/hellpuffyt/configsync/internal/model"
+	"github.com/hellpuffyt/configsync/internal/rules"
 )
 
 // Entry is one environment's recorded state for a single key.

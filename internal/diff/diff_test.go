@@ -3,8 +3,8 @@ package diff
 import (
 	"testing"
 
-	"github.com/prabeshsharma/configsync/internal/model"
-	"github.com/prabeshsharma/configsync/internal/rules"
+	"github.com/hellpuffyt/configsync/internal/model"
+	"github.com/hellpuffyt/configsync/internal/rules"
 )
 
 func strCfg(pairs ...string) model.Config {

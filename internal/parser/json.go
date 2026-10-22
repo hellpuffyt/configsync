@@ -3,7 +3,7 @@ package parser
 import (
 	"encoding/json"
 
-	"github.com/prabeshsharma/configsync/internal/model"
+	"github.com/hellpuffyt/configsync/internal/model"
 )
 
 // ParseJSON parses a JSON document and flattens it to dotted paths.

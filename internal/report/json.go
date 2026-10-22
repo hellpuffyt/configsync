@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/prabeshsharma/configsync/internal/diff"
+	"github.com/hellpuffyt/configsync/internal/diff"
 )
 
 // JSONCell is one environment's redacted view of a key, for JSON output.

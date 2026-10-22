@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/prabeshsharma/configsync/internal/model"
+	"github.com/hellpuffyt/configsync/internal/model"
 )
 
 // ParseProperties parses a Java-style .properties file: "key=value" or
