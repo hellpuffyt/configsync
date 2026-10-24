@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Passwords embedded in URL values are redacted in table/JSON output and
   stored in snapshots only as part of a hash (they were printed and stored
   verbatim when the key name was not a secret pattern).
+- Parse errors for `.env`, `.properties` and TOML files no longer echo the
+  offending line or value to stderr (a malformed `DB_PASSWORD` line or a URL
+  with an embedded password was printed verbatim in the error message).
 
 ### Fixed
 

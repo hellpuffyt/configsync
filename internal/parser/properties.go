@@ -90,7 +90,7 @@ func splitPropertyLine(line string) (key, value string, err error) {
 	}
 	key = keyBuf.String()
 	if key == "" {
-		return "", "", fmt.Errorf("empty property key in line %q", line)
+		return "", "", fmt.Errorf("empty property key")
 	}
 	// Skip whitespace, then one optional '=' or ':', then whitespace.
 	for i < len(line) && (line[i] == ' ' || line[i] == '\t') {

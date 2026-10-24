@@ -247,14 +247,14 @@ func parseTOMLValue(s string) (interface{}, error) {
 	case s == "false":
 		return false, nil
 	case strings.HasPrefix(s, `"""`) || strings.HasPrefix(s, "'''"):
-		return nil, fmt.Errorf("multi-line strings are not supported: %s", s)
+		return nil, fmt.Errorf("multi-line strings are not supported")
 	case strings.HasPrefix(s, "{"):
-		return nil, fmt.Errorf("inline tables are not supported (use a [table] header): %s", s)
+		return nil, fmt.Errorf("inline tables are not supported (use a [table] header)")
 	case strings.HasPrefix(s, `"`):
 		return parseTOMLBasicString(s)
 	case strings.HasPrefix(s, `'`):
 		if len(s) < 2 || s[len(s)-1] != '\'' {
-			return nil, fmt.Errorf("unterminated literal string: %s", s)
+			return nil, fmt.Errorf("unterminated literal string")
 		}
 		return s[1 : len(s)-1], nil
 	case strings.HasPrefix(s, "["):
@@ -268,7 +268,7 @@ func parseTOMLValue(s string) (interface{}, error) {
 			if strings.HasPrefix(clean, prefix) {
 				i, err := strconv.ParseInt(clean[2:], b, 64)
 				if err != nil {
-					return nil, fmt.Errorf("invalid integer %q", s)
+					return nil, fmt.Errorf("invalid integer")
 				}
 				return i, nil
 			}
@@ -283,7 +283,7 @@ func parseTOMLValue(s string) (interface{}, error) {
 		}
 		// Anything else (e.g. an unquoted word) is not valid TOML; it used
 		// to be accepted as a string, hiding typos and unsupported syntax.
-		return nil, fmt.Errorf("unsupported or invalid value %q", s)
+		return nil, fmt.Errorf("unsupported or invalid value")
 	}
 }
 
@@ -294,7 +294,7 @@ var (
 
 func parseTOMLBasicString(s string) (string, error) {
 	if len(s) < 2 || s[len(s)-1] != '"' {
-		return "", fmt.Errorf("unterminated string: %s", s)
+		return "", fmt.Errorf("unterminated string")
 	}
 	inner := s[1 : len(s)-1]
 	var b strings.Builder
@@ -324,7 +324,7 @@ func parseTOMLBasicString(s string) (string, error) {
 
 func parseTOMLArray(s string) ([]interface{}, error) {
 	if !strings.HasSuffix(s, "]") {
-		return nil, fmt.Errorf("unterminated array: %s", s)
+		return nil, fmt.Errorf("unterminated array")
 	}
 	inner := strings.TrimSpace(s[1 : len(s)-1])
 	if inner == "" {
