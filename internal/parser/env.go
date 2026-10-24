@@ -26,7 +26,7 @@ func ParseEnv(data []byte) (model.Config, error) {
 
 		eq := strings.Index(line, "=")
 		if eq < 0 {
-			return nil, fmt.Errorf("line %d: missing '=' in %q", lineNo, line)
+			return nil, fmt.Errorf("line %d: missing '='", lineNo)
 		}
 		key := strings.TrimSpace(line[:eq])
 		if key == "" {

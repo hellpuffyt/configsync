@@ -118,3 +118,36 @@ func TestTOMLValuesItSupports(t *testing.T) {
 		t.Errorf("hex kind = %s", cfg["hex"].Kind)
 	}
 }
+
+// A parse error must never echo the value it failed on: the line may hold a
+// secret (DB_PASSWORD, a URL with an embedded password), and the error is
+// printed to stderr -- typically a CI log.
+func TestParseErrorsNeverEchoValues(t *testing.T) {
+	const marker = "SYNTHETIC-VALUE-MARKER"
+	cases := []struct {
+		name  string
+		parse func([]byte) (model.Config, error)
+		src   string
+	}{
+		{"env missing equals", ParseEnv, "DB_PASSWORD " + marker},
+		{"properties empty key", ParseProperties, "=https://u:" + marker + "@example.invalid"},
+		{"toml inline table", ParseTOML, `db = { url = "https://u:` + marker + `@example.invalid" }`},
+		{"toml unterminated string", ParseTOML, `DB_PASSWORD = "` + marker},
+		{"toml unterminated literal", ParseTOML, `DB_PASSWORD = '` + marker},
+		{"toml multi-line", ParseTOML, `DB_PASSWORD = """` + marker},
+		{"toml bare word", ParseTOML, `DB_PASSWORD = ` + marker},
+		{"toml bad integer", ParseTOML, `PIN = 0x` + marker},
+		{"toml unterminated array", ParseTOML, `TOKENS = ["` + marker + `"`},
+		{"toml bad array element", ParseTOML, `TOKENS = [` + marker + `]`},
+	}
+	for _, c := range cases {
+		_, err := c.parse([]byte(c.src))
+		if err == nil {
+			t.Errorf("%s: expected a parse error", c.name)
+			continue
+		}
+		if strings.Contains(err.Error(), marker) {
+			t.Errorf("%s: error message leaks the value: %v", c.name, err)
+		}
+	}
+}
