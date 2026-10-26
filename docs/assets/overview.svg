@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="470" viewBox="0 0 1200 470" role="img" aria-labelledby="t d">
+  <title id="t">configsync data flow</title>
+  <desc id="d">Each --env NAME=PATH file is parsed by the parser for its extension (.env, YAML, JSON, TOML or .properties) and flattened into a model.Config map of dotted keys. diff.Compare takes the union of keys across environments and classifies each key as ok, missing, value-differs, empty-in or type-differs, then the rules file applies ignore, must_match and expected_variance. Secret keys and passwords inside URLs are redacted before report.Table or report.JSON prints the matrix, and the exit code is 0, 1 or 2. The snapshot command stores the same flattened state with secrets as sha256 hashes, and drift compares a later run against it, reporting became-present, became-missing and value-changed.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#A3AAA6"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="470" fill="#0C0D0D"/>
+
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="11" fill="#A3AAA6" letter-spacing="2">
+    <text x="40" y="36">INPUT</text>
+    <text x="270" y="36">PARSE AND FLATTEN</text>
+    <text x="560" y="36">COMPARE (configsync compare)</text>
+    <text x="900" y="36">REPORT</text>
+    <text x="560" y="354">OVER TIME (configsync snapshot, then configsync drift)</text>
+  </g>
+
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">
+    <!-- inputs -->
+    <rect x="40" y="52" width="190" height="168" rx="6" fill="#17191A" stroke="#2A2E2D"/>
+    <text x="56" y="76" font-size="13" fill="#EEEAE2">--env NAME=PATH</text>
+    <text x="56" y="94" font-size="11" fill="#A3AAA6">two or more, any mix</text>
+    <text x="56" y="118" font-size="11" fill="#EEEAE2">dev=dev.env</text>
+    <text x="56" y="136" font-size="11" fill="#EEEAE2">staging=staging.yaml</text>
+    <text x="56" y="154" font-size="11" fill="#EEEAE2">prod=prod.json</text>
+    <text x="56" y="172" font-size="11" fill="#EEEAE2">qa=app.toml</text>
+    <text x="56" y="190" font-size="11" fill="#EEEAE2">ci=app.properties</text>
+
+    <rect x="40" y="236" width="190" height="84" rx="6" fill="#17191A" stroke="#2A2E2D"/>
+    <text x="56" y="260" font-size="13" fill="#EEEAE2">--rules FILE</text>
+    <text x="56" y="280" font-size="11" fill="#A3AAA6">expected_variance</text>
+    <text x="56" y="296" font-size="11" fill="#A3AAA6">must_match · ignore</text>
+    <text x="56" y="312" font-size="11" fill="#A3AAA6">secret_patterns</text>
+
+    <!-- parse -->
+    <rect x="270" y="52" width="250" height="102" rx="6" fill="#17191A" stroke="#2A2E2D"/>
+    <text x="286" y="76" font-size="13" fill="#EEEAE2">parser.DetectFormat</text>
+    <text x="286" y="96" font-size="11" fill="#A3AAA6">by extension, one parser each:</text>
+    <text x="286" y="116" font-size="11" fill="#A3AAA6">ParseEnv · ParseYAML · ParseJSON</text>
+    <text x="286" y="134" font-size="11" fill="#A3AAA6">ParseTOML · ParseProperties</text>
+
+    <rect x="270" y="170" width="250" height="150" rx="6" fill="#17191A" stroke="#3FBF8A"/>
+    <text x="286" y="194" font-size="13" fill="#EEEAE2">model.Config</text>
+    <text x="286" y="214" font-size="11" fill="#A3AAA6">map[dotted.key]Value</text>
+    <text x="286" y="240" font-size="11" fill="#EEEAE2">database.url</text>
+    <text x="286" y="258" font-size="11" fill="#EEEAE2">hosts.0.name</text>
+    <text x="286" y="284" font-size="11" fill="#A3AAA6">Value{Raw, Kind}, where Kind is</text>
+    <text x="286" y="300" font-size="11" fill="#A3AAA6">string, bool, number or null</text>
+
+    <!-- compare -->
+    <rect x="560" y="52" width="300" height="134" rx="6" fill="#17191A" stroke="#2A2E2D"/>
+    <text x="576" y="76" font-size="13" fill="#EEEAE2">diff.Compare</text>
+    <text x="576" y="96" font-size="11" fill="#A3AAA6">union of keys, then per key:</text>
+    <text x="576" y="118" font-size="11" fill="#EEEAE2">ok</text>
+    <text x="700" y="118" font-size="11" fill="#EEEAE2">missing</text>
+    <text x="576" y="138" font-size="11" fill="#EEEAE2">value-differs</text>
+    <text x="700" y="138" font-size="11" fill="#EEEAE2">empty-in</text>
+    <text x="576" y="158" font-size="11" fill="#EEEAE2">type-differs</text>
+    <text x="700" y="158" font-size="11" fill="#A3AAA6">"true" vs true</text>
+
+    <rect x="560" y="202" width="300" height="118" rx="6" fill="#17191A" stroke="#2A2E2D"/>
+    <text x="576" y="226" font-size="13" fill="#EEEAE2">rules</text>
+    <text x="576" y="248" font-size="11" fill="#A3AAA6">ignore: key dropped</text>
+    <text x="576" y="266" font-size="11" fill="#A3AAA6">must_match: drift is unexpected</text>
+    <text x="576" y="284" font-size="11" fill="#A3AAA6">expected_variance: -&gt; expected-variance</text>
+    <text x="576" y="302" font-size="11" fill="#A3AAA6">(never for type-differs)</text>
+
+    <!-- report -->
+    <rect x="900" y="52" width="260" height="100" rx="6" fill="#17191A" stroke="#2A2E2D"/>
+    <text x="916" y="76" font-size="13" fill="#EEEAE2">redaction</text>
+    <text x="916" y="96" font-size="11" fill="#A3AAA6">secret key name -&gt; [REDACTED]</text>
+    <text x="916" y="114" font-size="11" fill="#A3AAA6">URL password -&gt; xxxxx</text>
+    <text x="916" y="132" font-size="11" fill="#A3AAA6">built-in patterns always on</text>
+
+    <rect x="900" y="168" width="124" height="60" rx="6" fill="#17191A" stroke="#2A2E2D"/>
+    <text x="916" y="192" font-size="12" fill="#EEEAE2">report.Table</text>
+    <text x="916" y="212" font-size="11" fill="#A3AAA6">--all</text>
+    <rect x="1036" y="168" width="124" height="60" rx="6" fill="#17191A" stroke="#2A2E2D"/>
+    <text x="1052" y="192" font-size="12" fill="#EEEAE2">report.JSON</text>
+    <text x="1052" y="212" font-size="11" fill="#A3AAA6">--format json</text>
+
+    <rect x="900" y="244" width="260" height="76" rx="6" fill="none" stroke="#2A2E2D" stroke-dasharray="4 3"/>
+    <text x="916" y="268" font-size="12" fill="#EEEAE2">exit code</text>
+    <text x="916" y="288" font-size="11" fill="#A3AAA6">0 none unexpected · 1 drift</text>
+    <text x="916" y="306" font-size="11" fill="#A3AAA6">2 usage or input error</text>
+
+    <!-- over time -->
+    <rect x="270" y="362" width="250" height="80" rx="6" fill="#17191A" stroke="#2A2E2D"/>
+    <text x="286" y="386" font-size="13" fill="#EEEAE2">snapshot.Build</text>
+    <text x="286" y="406" font-size="11" fill="#A3AAA6">present / value per key and env</text>
+    <text x="286" y="424" font-size="11" fill="#A3AAA6">secrets stored as sha256:...</text>
+
+    <rect x="560" y="362" width="300" height="80" rx="6" fill="#17191A" stroke="#2A2E2D"/>
+    <text x="576" y="386" font-size="13" fill="#EEEAE2">baseline.json  -&gt;  snapshot.Diff</text>
+    <text x="576" y="406" font-size="11" fill="#A3AAA6">compares a later run with the baseline,</text>
+    <text x="576" y="424" font-size="11" fill="#A3AAA6">ignore rules applied</text>
+
+    <rect x="900" y="362" width="260" height="80" rx="6" fill="#17191A" stroke="#2A2E2D"/>
+    <text x="916" y="386" font-size="12" fill="#EEEAE2">DriftEntry per key/env</text>
+    <text x="916" y="406" font-size="11" fill="#A3AAA6">became-present · became-missing</text>
+    <text x="916" y="424" font-size="11" fill="#A3AAA6">value-changed · exit 0 or 1</text>
+  </g>
+
+  <g stroke="#A3AAA6" stroke-width="1.4" fill="none">
+    <path d="M230 120 L268 120" marker-end="url(#a)"/>
+    <line x1="395" y1="154" x2="395" y2="168" marker-end="url(#a)"/>
+    <path d="M520 245 L540 245 L540 120 L558 120" marker-end="url(#a)"/>
+    <path d="M230 290 L250 290 L250 332 L540 332 L540 262 L558 262" marker-end="url(#a)"/>
+    <line x1="710" y1="186" x2="710" y2="200" marker-end="url(#a)"/>
+    <path d="M860 262 L880 262 L880 102 L898 102" marker-end="url(#a)"/>
+    <line x1="1030" y1="152" x2="1030" y2="166" marker-end="url(#a)"/>
+    <line x1="1030" y1="228" x2="1030" y2="242" marker-end="url(#a)"/>
+    <path d="M395 320 L395 360" marker-end="url(#a)"/>
+    <path d="M520 402 L558 402" marker-end="url(#a)"/>
+    <path d="M860 402 L898 402" marker-end="url(#a)"/>
+  </g>
+</svg>
