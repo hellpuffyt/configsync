@@ -5,8 +5,6 @@ which keys differ, which are missing and which are merely empty. Those
 three have different consequences, and a plain diff shows them all as a
 changed line.
 
-<img src="docs/assets/overview.svg" width="100%" alt="configsync data flow: each --env file is parsed by its format's parser and flattened to a model.Config of dotted keys; diff.Compare classifies every key as ok, missing, value-differs, empty-in or type-differs; rules apply ignore, must_match and expected_variance; secrets are redacted before table or JSON output and an exit code of 0, 1 or 2. snapshot stores the same state with hashed secrets and drift compares a later run against it.">
-
 `configsync` compares two or more environments (dev, staging, prod, or any
 set you name) across `.env`, YAML, JSON, TOML and Java-style
 `.properties` files. It flattens nested structures to dotted
@@ -14,6 +12,16 @@ paths so a YAML file and a flat `.env` file can be compared key-for-key,
 classifies every difference it finds, and lets you declare which keys are
 *expected* to differ (URLs, hostnames, credentials) versus which must be
 identical everywhere (feature flags, timeouts).
+
+## Demo
+
+<img src="docs/screenshots/configsync-compare-three-envs.png" width="100%" alt="Terminal capture: configsync compare over examples/dev.env, staging.yaml and prod.json with examples/rules.yaml, showing API_KEY and DB_PASSWORD redacted, two expected-variance keys, a type-differs must-match violation on FEATURE_NEW_UI, a LOG_LEVEL difference and a missing STAGING_ONLY_FLAG; 7 keys shown, 5 unexpected drift, exit status 1.">
+
+Real terminal capture of the comparison of the three committed example
+environments (a `.env`, a YAML and a JSON file). Secrets are redacted, the
+URL and host differences are expected by the rules file, and the run exits
+`1` because five differences are unexpected. The same output is under
+[Usage](#compare-environments) as text.
 
 ## Why
 
@@ -91,6 +99,10 @@ a `.properties` file's `database.url=...` produce the same key,
 `missing` on each side, so spell keys the same way in every environment.
 
 ## Architecture
+
+<img src="docs/assets/overview.svg" width="100%" alt="Diagram of the configsync data flow: each --env file is parsed by its format's parser and flattened to a model.Config of dotted keys; diff.Compare classifies every key as ok, missing, value-differs, empty-in or type-differs; rules apply ignore, must_match and expected_variance; secrets are redacted before table or JSON output and an exit code of 0, 1 or 2. snapshot stores the same state with hashed secrets and drift compares a later run against it.">
+
+*Diagram: parse and flatten, compare and classify, apply rules, redact and report; snapshot and drift below.*
 
 ```
 cmd/configsync/        CLI entry point and subcommands
